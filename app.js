@@ -5,7 +5,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // ======================================
 
 const SUPABASE_URL = "https://bznistwsamrkgzdelfro.supabase.co";
-
 const SUPABASE_ANON_KEY = "sb_publishable_duzGvBK2ZVHTFXfbXHz3Cw_z-T8p0A1";
 
 const configured =
