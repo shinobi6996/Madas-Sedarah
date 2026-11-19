@@ -1,82 +1,182 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// ======================================
+// 1. KONFIGURASI SUPABASE
+// ======================================
+
 const SUPABASE_URL = "ISI_SUPABASE_PROJECT_URL";
 const SUPABASE_ANON_KEY = "ISI_SUPABASE_ANON_KEY";
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const configured =
+  SUPABASE_URL.startsWith("https://") &&
+  !SUPABASE_URL.includes("ISI_") &&
+  !SUPABASE_ANON_KEY.includes("ISI_");
 
-const $ = id => document.getElementById(id);
+const supabase = configured
+  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
+
+// ======================================
+// 2. VARIABEL APLIKASI
+// ======================================
+
+const $ = (id) => document.getElementById(id);
 
 let records = [];
 let isAdmin = false;
 
+// ======================================
+// 3. NOTIFIKASI DAN TAMPILAN
+// ======================================
+
 function notify(message) {
   $("toast").textContent = message;
   $("toast").classList.remove("hidden");
-  setTimeout(() => $("toast").classList.add("hidden"), 2600);
+
+  setTimeout(() => {
+    $("toast").classList.add("hidden");
+  }, 2600);
 }
 
 function escapeHtml(value) {
-  return String(value ?? "").replace(/[&<>"']/g, c => ({
-    "&":"&amp;", "<":"&lt;", ">":"&gt;",
-    '"':"&quot;", "'":"&#39;"
-  }[c]));
+  return String(value ?? "").replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[c]);
 }
 
-function render() {
-  const q = $("searchInput").value.toLowerCase().trim();
+function setConnection() {
+  $("connection").textContent = navigator.onLine
+    ? "Online"
+    : "Offline";
+}
 
-  const filtered = records.filter(r =>
-    [r.nama, r.nomor_lambung, r.plat_nomor]
-      .some(v => String(v).toLowerCase().includes(q))
-  );
+function showError(message) {
+  $("errorBox").textContent = message;
+  $("errorBox").classList.remove("hidden");
+}
+
+function clearError() {
+  $("errorBox").classList.add("hidden");
+}
+
+// ======================================
+// 4. MENAMPILKAN DATA ANGGOTA
+// ======================================
+
+function render() {
+  const q = $("searchInput").value.trim().toLowerCase();
+
+  const filtered = records.filter((r) => [
+    r.nama,
+    r.nomor_lambung,
+    r.plat_nomor
+  ].some((v) => String(v ?? "").toLowerCase().includes(q)));
 
   $("totalCount").textContent = records.length;
   $("shownCount").textContent = filtered.length;
 
-  $("memberList").innerHTML = filtered.map(r => `
+  $("memberList").innerHTML = filtered.map((r) => `
     <article class="member-card">
       <div class="member-icon">
-        ${escapeHtml(r.nama.charAt(0).toUpperCase())}
+        ${escapeHtml((r.nama || "M").charAt(0).toUpperCase())}
       </div>
+
       <div>
-        <div class="member-name">${escapeHtml(r.nama)}</div>
+        <div class="member-name">
+          ${escapeHtml(r.nama)}
+        </div>
+
         <div class="details">
-          <span class="pill"><b>LAMBUNG</b>${escapeHtml(r.nomor_lambung)}</span>
-          <span class="pill"><b>PLAT</b>${escapeHtml(r.plat_nomor)}</span>
+          <span class="pill">
+            <b>LAMBUNG</b>
+            ${escapeHtml(r.nomor_lambung)}
+          </span>
+
+          <span class="pill">
+            <b>PLAT</b>
+            ${escapeHtml(r.plat_nomor)}
+          </span>
         </div>
       </div>
+
       ${isAdmin ? `
         <div class="card-actions">
-          <button class="edit-btn" data-edit="${r.id}">Edit</button>
-          <button class="delete-btn" data-delete="${r.id}">Hapus</button>
-        </div>` : ""}
+          <button class="edit-btn" data-edit="${r.id}">
+            Edit
+          </button>
+
+          <button class="delete-btn" data-delete="${r.id}">
+            Hapus
+          </button>
+        </div>
+      ` : ""}
     </article>
   `).join("");
 
-  $("emptyState").classList.toggle("hidden", filtered.length !== 0);
+  $("emptyState").classList.toggle(
+    "hidden",
+    filtered.length !== 0
+  );
+
   $("loading").classList.add("hidden");
 }
 
+// ======================================
+// 5. MENGAMBIL DATA DARI SUPABASE
+// ======================================
+
 async function loadRecords() {
-  $("connection").textContent = navigator.onLine ? "Online" : "Offline";
-  $("errorBox").classList.add("hidden");
+  clearError();
+  setConnection();
+
+  if (!supabase) {
+    $("loading").classList.add("hidden");
+
+    showError(
+      "Aplikasi belum terhubung ke Supabase. " +
+      "Silakan isi URL dan Anon Key di app.js."
+    );
+
+    return;
+  }
+
+  $("loading").classList.remove("hidden");
 
   const { data, error } = await supabase
     .from("anggota_madas")
-    .select("*")
+    .select("id,nama,nomor_lambung,plat_nomor,created_at")
     .order("created_at", { ascending: false });
 
   $("loading").classList.add("hidden");
 
   if (error) {
-    $("errorBox").textContent = "Gagal mengambil data anggota.";
-    $("errorBox").classList.remove("hidden");
+    showError(
+      "Gagal mengambil data anggota. " +
+      "Periksa koneksi dan pengaturan Supabase."
+    );
+
     return;
   }
 
   records = data || [];
   render();
+}
+
+// ======================================
+// 6. LOGIN DAN HAK AKSES ADMIN
+// ======================================
+
+function openModal() {
+  $("adminModal").classList.remove("hidden");
+  $("loginError").classList.add("hidden");
+}
+
+function closeModal() {
+  $("adminModal").classList.add("hidden");
 }
 
 function setAdminUI(user) {
@@ -85,138 +185,219 @@ function setAdminUI(user) {
   $("loginForm").classList.toggle("hidden", isAdmin);
   $("adminPanel").classList.toggle("hidden", !isAdmin);
 
-  $("adminOpen").textContent = isAdmin ? "Panel Admin" : "Admin";
+  $("adminOpen").textContent = isAdmin
+    ? "Panel Admin"
+    : "Admin";
 
   render();
 }
 
-async function checkAdmin(session) {
-  if (!session) {
+async function checkAdmin(user) {
+  if (!user || !supabase) {
     setAdminUI(null);
     return false;
   }
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("admin_users")
     .select("user_id")
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .maybeSingle();
 
-  if (data) {
-    setAdminUI(session.user);
-    return true;
+  if (error || !data) {
+    setAdminUI(null);
+    return false;
   }
 
-  await supabase.auth.signOut();
-  setAdminUI(null);
-  return false;
+  setAdminUI(user);
+  return true;
 }
 
-async function start() {
-  const { data } = await supabase.auth.getSession();
-
-  await checkAdmin(data.session);
-  await loadRecords();
-
-  supabase.auth.onAuthStateChange(async (_event, session) => {
-    setAdminUI(null);
-
-    if (session) {
-      setTimeout(async () => {
-        await checkAdmin(session);
-        await loadRecords();
-      }, 0);
-    } else {
-      await loadRecords();
-    }
-  });
-}
-
-function openModal() {
-  $("adminModal").classList.remove("hidden");
-}
-
-function closeModal() {
-  $("adminModal").classList.add("hidden");
-}
+// ======================================
+// 7. FORM TAMBAH DAN EDIT DATA
+// ======================================
 
 function resetForm() {
   $("memberForm").reset();
   $("recordId").value = "";
+
   $("saveBtn").textContent = "+ Simpan Data";
   $("cancelEdit").classList.add("hidden");
 }
 
-$("adminOpen").onclick = openModal;
-$("closeModal").onclick = closeModal;
+// ======================================
+// 8. MEMULAI APLIKASI
+// ======================================
 
-$("adminModal").addEventListener("click", e => {
-  if (e.target === $("adminModal")) closeModal();
+async function start() {
+  setConnection();
+
+  if (!supabase) {
+    await loadRecords();
+    return;
+  }
+
+  const { data, error } = await supabase.auth.getSession();
+
+  if (!error && data.session) {
+    await checkAdmin(data.session.user);
+  }
+
+  await loadRecords();
+
+  supabase.auth.onAuthStateChange((_event, session) => {
+    setTimeout(async () => {
+      if (session) {
+        await checkAdmin(session.user);
+      } else {
+        setAdminUI(null);
+      }
+
+      await loadRecords();
+    }, 0);
+  });
+}
+
+// ======================================
+// 9. TOMBOL ADMIN
+// ======================================
+
+$("adminOpen").addEventListener("click", openModal);
+
+$("closeModal").addEventListener("click", closeModal);
+
+$("adminModal").addEventListener("click", (e) => {
+  if (e.target === $("adminModal")) {
+    closeModal();
+  }
 });
 
+// ======================================
+// 10. PENCARIAN DAN REFRESH
+// ======================================
+
 $("searchInput").addEventListener("input", render);
+
 $("refreshBtn").addEventListener("click", loadRecords);
 
-$("loginForm").addEventListener("submit", async e => {
+// ======================================
+// 11. LOGIN ADMIN
+// ======================================
+
+$("loginForm").addEventListener("submit", async (e) => {
   e.preventDefault();
 
+  $("loginError").classList.add("hidden");
+
+  if (!supabase) {
+    $("loginError").textContent =
+      "Koneksi Supabase belum diatur.";
+
+    $("loginError").classList.remove("hidden");
+    return;
+  }
+
   const { data, error } = await supabase.auth.signInWithPassword({
-    email: $("email").value,
+    email: $("email").value.trim(),
     password: $("password").value
   });
 
   if (error) {
-    $("loginError").textContent = "Email atau password salah.";
+    $("loginError").textContent =
+      "Email atau password salah.";
+
     $("loginError").classList.remove("hidden");
     return;
   }
 
-  const success = await checkAdmin(data.session);
+  const admin = await checkAdmin(data.user);
 
-  if (!success) {
-    $("loginError").textContent = "Akun tidak memiliki hak Admin.";
+  if (!admin) {
+    await supabase.auth.signOut();
+
+    $("loginError").textContent =
+      "Akun ini tidak memiliki hak akses admin.";
+
     $("loginError").classList.remove("hidden");
     return;
   }
 
-  $("loginError").classList.add("hidden");
-  notify("Berhasil masuk sebagai Admin.");
+  $("loginForm").reset();
+
+  notify("Berhasil masuk sebagai admin.");
   await loadRecords();
 });
 
-$("memberForm").addEventListener("submit", async e => {
+// ======================================
+// 12. TAMBAH DAN EDIT ANGGOTA
+// ======================================
+
+$("memberForm").addEventListener("submit", async (e) => {
   e.preventDefault();
 
-  if (!isAdmin) return;
+  if (!isAdmin || !supabase) {
+    notify("Anda tidak memiliki hak admin.");
+    return;
+  }
 
   const payload = {
     nama: $("memberName").value.trim(),
-    nomor_lambung: $("fleetNumber").value.trim().toUpperCase(),
-    plat_nomor: $("plateNumber").value.trim().toUpperCase()
+
+    nomor_lambung: $("fleetNumber")
+      .value.trim().toUpperCase(),
+
+    plat_nomor: $("plateNumber")
+      .value.trim().toUpperCase()
   };
+
+  if (
+    !payload.nama ||
+    !payload.nomor_lambung ||
+    !payload.plat_nomor
+  ) {
+    notify("Semua kolom wajib diisi.");
+    return;
+  }
 
   const id = $("recordId").value;
 
   const result = id
-    ? await supabase.from("anggota_madas").update(payload).eq("id", id)
-    : await supabase.from("anggota_madas").insert(payload);
+    ? await supabase
+        .from("anggota_madas")
+        .update(payload)
+        .eq("id", id)
+    : await supabase
+        .from("anggota_madas")
+        .insert(payload);
 
   if (result.error) {
-    notify("Gagal menyimpan data.");
+    notify("Gagal menyimpan data anggota.");
     return;
   }
 
   resetForm();
+
   await loadRecords();
-  notify("Data anggota berhasil disimpan.");
+
+  notify(
+    id
+      ? "Data anggota berhasil diperbarui."
+      : "Data anggota berhasil ditambahkan."
+  );
 });
 
-$("memberList").addEventListener("click", async e => {
+// ======================================
+// 13. EDIT DAN HAPUS ANGGOTA
+// ======================================
+
+$("memberList").addEventListener("click", async (e) => {
   const edit = e.target.closest("[data-edit]");
   const del = e.target.closest("[data-delete]");
 
   if (edit && isAdmin) {
-    const r = records.find(x => String(x.id) === edit.dataset.edit);
+    const r = records.find(
+      (x) => String(x.id) === edit.dataset.edit
+    );
 
     if (!r) return;
 
@@ -231,44 +412,79 @@ $("memberList").addEventListener("click", async e => {
     openModal();
   }
 
-  if (del && isAdmin && confirm("Hapus data anggota ini?")) {
+  if (
+    del &&
+    isAdmin &&
+    confirm("Apakah Anda yakin ingin menghapus data ini?")
+  ) {
     const { error } = await supabase
       .from("anggota_madas")
       .delete()
       .eq("id", del.dataset.delete);
 
     if (error) {
-      notify("Gagal menghapus data.");
+      notify("Gagal menghapus data anggota.");
     } else {
       await loadRecords();
-      notify("Data berhasil dihapus.");
+      notify("Data anggota berhasil dihapus.");
     }
   }
 });
 
-$("cancelEdit").onclick = resetForm;
+// ======================================
+// 14. BATAL EDIT
+// ======================================
 
-$("logoutBtn").onclick = async () => {
-  await supabase.auth.signOut();
+$("cancelEdit").addEventListener("click", resetForm);
+
+// ======================================
+// 15. LOGOUT ADMIN
+// ======================================
+
+$("logoutBtn").addEventListener("click", async () => {
+  if (!supabase) return;
+
+  const { error } = await supabase.auth.signOut();
+
+  if (error) {
+    notify("Gagal keluar dari akun admin.");
+    return;
+  }
+
   setAdminUI(null);
   resetForm();
   closeModal();
-  notify("Berhasil keluar.");
-};
+
+  notify("Anda telah keluar dari akun admin.");
+});
+
+// ======================================
+// 16. STATUS INTERNET
+// ======================================
 
 window.addEventListener("online", () => {
-  $("connection").textContent = "Online";
+  setConnection();
   loadRecords();
 });
 
-window.addEventListener("offline", () => {
-  $("connection").textContent = "Offline";
-});
+window.addEventListener("offline", setConnection);
+
+// ======================================
+// 17. SERVICE WORKER PWA
+// ======================================
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js");
+    navigator.serviceWorker
+      .register("./sw.js")
+      .catch((error) => {
+        console.error("Service Worker:", error);
+      });
   });
 }
+
+// ======================================
+// 18. JALANKAN APLIKASI
+// ======================================
 
 start();
