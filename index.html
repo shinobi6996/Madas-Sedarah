@@ -1,4 +1,5 @@
 <!doctype html>
+
 <html lang="id">
 <head>
   <meta charset="utf-8">
@@ -21,63 +22,70 @@
     </div>
     <button id="adminOpen" class="admin-open" type="button">Admin</button>
   </header>
-
   <main class="wrap">
     <section class="stats">
       <div><strong id="totalCount">0</strong><span>Total Data</span></div>
       <div><strong id="shownCount">0</strong><span>Ditampilkan</span></div>
       <div><strong id="connection">—</strong><span>Status</span></div>
     </section>
-
-    <section class="toolbar">
-      <label class="searchbox">
-        <span aria-hidden="true">⌕</span>
-        <input id="searchInput" type="search" placeholder="Cari nama, nomor lambung, atau plat..." autocomplete="off">
-      </label>
-      <button id="refreshBtn" class="refresh-btn" type="button" aria-label="Muat ulang">↻</button>
-    </section>
-
-    <section class="section-heading">
-      <div><span class="section-kicker">DIREKTORI</span><h2>Daftar Anggota</h2></div>
-      <span class="read-only-tag">Akses lihat</span>
-    </section>
-
-    <div id="loading" class="notice">Memuat data anggota…</div>
-    <div id="errorBox" class="notice error hidden"></div>
-    <div id="emptyState" class="empty hidden">
-      <div class="empty-mark">M</div><h3>Belum ada data</h3>
-      <p>Data anggota akan tampil di sini setelah admin menambahkannya.</p>
-    </div>
-    <div id="memberList" class="member-list"></div>
-    <p class="footnote">Informasi ini dikelola oleh Admin MADAS Sedarah DPC Kota Probolinggo.</p>
+<section class="toolbar">
+  <label class="searchbox">
+    <span aria-hidden="true">⌕</span>
+    <input id="searchInput" type="search" placeholder="Cari nama, nomor lambung, plat, jenis atau warna mobil..." autocomplete="off">
+  </label>
+  <button id="refreshBtn" class="refresh-btn" type="button" aria-label="Muat ulang">↻</button>
+</section>
+<section class="section-heading">
+  <div><span class="section-kicker">DIREKTORI</span><h2>Daftar Anggota</h2></div>
+  <span class="read-only-tag">Akses lihat</span>
+</section>
+<div id="loading" class="notice">Memuat data anggota…</div>
+<div id="errorBox" class="notice error hidden"></div>
+<div id="emptyState" class="empty hidden">
+  <div class="empty-mark">M</div><h3>Belum ada data</h3>
+  <p>Data anggota akan tampil di sini setelah admin menambahkannya.</p>
+</div>
+<div id="memberList" class="member-list"></div>
+<p class="footnote">Informasi ini dikelola oleh Admin MADAS Sedarah DPC Kota Probolinggo.</p>
   </main>
-
   <div id="adminModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
     <div class="modal-card">
       <button id="closeModal" class="close" type="button" aria-label="Tutup">×</button>
       <div class="modal-emblem">M</div>
       <h2 id="adminTitle">Panel Admin</h2>
       <p class="muted">Masuk menggunakan akun admin yang telah didaftarkan.</p>
-      <form id="loginForm">
-        <label>Email admin<input id="email" type="email" required autocomplete="username" placeholder="admin@email.com"></label>
-        <label>Password<input id="password" type="password" required autocomplete="current-password" placeholder="Password"></label>
-        <button class="primary full" type="submit">Masuk Admin</button>
-      </form>
-      <div id="adminPanel" class="hidden">
-        <div class="signed-in">Anda masuk sebagai admin.</div>
-        <form id="memberForm">
-          <input id="recordId" type="hidden">
-          <label>Nama anggota<input id="memberName" type="text" maxlength="100" required placeholder="Nama lengkap"></label>
-          <label>Nomor lambung<input id="fleetNumber" type="text" maxlength="30" required placeholder="Contoh: ME-001"></label>
-          <label>Plat nomor<input id="plateNumber" type="text" maxlength="20" required placeholder="Contoh: N 1234 AB"></label>
-          <button class="primary full" type="submit" id="saveBtn">+ Simpan Data</button>
-          <button class="secondary full hidden" type="button" id="cancelEdit">Batal Edit</button>
-        </form>
-        <button id="logoutBtn" class="logout full" type="button">Keluar Admin</button>
-      </div>
-      <p id="loginError" class="form-error hidden"></p>
-      <p class="security-note">Akun admin dibuat melalui Supabase. Pengunjung biasa hanya dapat melihat data.</p>
-    </div>
+  <form id="loginForm">
+    <label>Email admin<input id="email" type="email" required autocomplete="username" placeholder="admin@email.com"></label>
+    <label>Password<input id="password" type="password" required autocomplete="current-password" placeholder="Password"></label>
+    <button class="primary full" type="submit">Masuk Admin</button>
+  </form>
+  <div id="adminPanel" class="hidden">
+    <div class="signed-in">Anda masuk sebagai admin.</div>
+    <form id="memberForm">
+      <input id="recordId" type="hidden">
+      <label>Nama anggota
+        <input id="memberName" type="text" maxlength="100" required placeholder="Nama lengkap">
+      </label>
+      <label>Nomor lambung
+        <input id="fleetNumber" type="text" maxlength="30" required placeholder="Contoh: ME-001">
+      </label>
+      <label>Plat nomor
+        <input id="plateNumber" type="text" maxlength="20" required placeholder="Contoh: N 1234 AB">
+      </label>
+      <label>Jenis mobil
+        <input id="jenisMobil" type="text" maxlength="100" placeholder="Contoh: Toyota Avanza">
+      </label>
+      <label>Warna mobil
+        <input id="warnaMobil" type="text" maxlength="50" placeholder="Contoh: Hitam">
+      </label>
+      <button class="primary full" type="submit" id="saveBtn">+ Simpan Data</button>
+      <button class="secondary full hidden" type="button" id="cancelEdit">Batal Edit</button>
+    </form>
+    <button id="logoutBtn" class="logout full" type="button">Keluar Admin</button>
+  </div>
+  <p id="loginError" class="form-error hidden"></p>
+  <p class="security-note">Akun admin dibuat melalui Supabase. Pengunjung biasa hanya dapat melihat data.</p>
+</div>
   </div>
   <div id="toast" class="toast hidden" role="status"></div>
   <script type="module" src="app.js"></script>
